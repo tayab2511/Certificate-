@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Create Certificate Drive — CUST CertSystem{% endblock %}
+
+{% block content %}
+<div class="fade-in max-w-3xl mx-auto space-y-8">
+
+  <!-- Page Header -->
+  <div>
+    <a href="{{ url_for('dashboard') }}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-cust-700 mb-4">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Back to Dashboard
+    </a>
+    <h1 class="text-3xl font-bold text-slate-800">Create Certificate Drive</h1>
+    <p class="text-slate-500 mt-1 text-sm">
+      Configure your certificate template, set signatures, and publish the student submission link.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+    <div class="bg-gradient-to-r from-cust-800 to-cust-600 px-8 py-5 flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full {% if ai_text %}bg-white/30 text-white/60{% else %}bg-white text-cust-700{% endif %}
+                     flex items-center justify-center text-xs font-bold">1</span>
+        <span class="text-sm font-medium {% if ai_text %}text-white/60{% else %}text-white{% endif %}">
+          Configure Template
+        </span>
+      </div>
+      <div class="flex-1 h-px bg-white/20"></div>
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full {% if ai_text %}bg-white text-cust-700{% else %}bg-white/20 text-white/50{% endif %}
+                     flex items-center justify-center text-xs font-bold">2</span>
+        <span class="text-sm font-medium {% if ai_text %}text-white{% else %}text-white/50{% endif %}">
+          Review & Save
+        </span>
+      </div>
+    </div>
+
+    <div class="p-8">
+
+      <!-- STEP 1 -->
+      {% if not ai_text %}
+      <form method="POST" action="{{ url_for('create_certificate') }}" id="generate-form" enctype="multipart/form-data">
+        <input type="hidden" name="action" id="form-action" value="save" />
+
+        <!-- Creation Mode Selector -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-slate-700 mb-3">
+            Creation Method <span class="text-red-500">*</span>
+          </label>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label class="cursor-pointer rounded-xl border-2 p-4 flex flex-col gap-1 border-slate-200 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 transition-all duration-150">
+              <input type="radio" name="creation_mode" value="predefined" class="sr-only" onchange="updateFormUI()" checked />
+              <span class="font-semibold text-slate-700 text-sm">Predefined Template</span>
+              <span class="text-xs text-slate-400">Standard CUST templates (No AI)</span>
+            </label>
+            <label class="cursor-pointer rounded-xl border-2 p-4 flex flex-col gap-1 border-slate-200 hover:border-emerald-300 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-all duration-150">
+              <input type="radio" name="creation_mode" value="manual" class="sr-only" onchange="updateFormUI()" />
+              <span class="font-semibold text-slate-700 text-sm">Upload Scan</span>
+              <span class="text-xs text-slate-400">Upload a PDF or Image scan</span>
+            </label>
+            <label class="cursor-pointer rounded-xl border-2 p-4 flex flex-col gap-1 border-slate-200 hover:border-purple-300 has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 transition-all duration-150">
+              <input type="radio" name="creation_mode" value="ai" class="sr-only" onchange="updateFormUI()" />
+              <span class="font-semibold text-slate-700 text-sm">AI Generation</span>
+              <span class="text-xs text-slate-400">Generate custom text via AI</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Predefined & AI Category Selector -->
+        <div class="mb-6" id="category-section">
+          <label class="block text-sm font-semibold text-slate-700 mb-3">
+            Certificate Category <span class="text-red-500">*</span>
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% set cats = [
+              ("Dean's Honor", "🏅", "yellow", "For academic excellence & top GPA achievers"),
+              ("Sports",       "🏆", "emerald", "For outstanding athletic achievement"),
+              ("Participation","🎓", "blue",    "For event & activity participants"),
+              ("Custom AI",    "✨", "purple",  "Write a custom prompt for AI generation")
+            ] %}
+            {% for cat_name, cat_icon, cat_color, cat_desc in cats %}
+            <label id="cat-label-{{ loop.index }}" class="category-card relative cursor-pointer rounded-xl border-2 p-4 flex flex-col gap-1 border-slate-200 hover:border-{{ cat_color }}-300 has-[:checked]:border-{{ cat_color }}-500 has-[:checked]:bg-{{ cat_color }}-50 transition-all duration-150" data-cat="{{ cat_name }}">
+              <input type="radio" name="category" value="{{ cat_name }}" class="sr-only" onchange="onCategoryChange(this)" {% if loop.first %}checked{% endif %} />
+              <span class="text-2xl">{{ cat_icon }}</span>
+              <span class="font-semibold text-slate-700 text-sm">{{ cat_name }}</span>
+              <span class="text-xs text-slate-400">{{ cat_desc }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Custom AI Prompt -->
+        <div id="custom-prompt-section" class="mb-6 hidden">
+          <label for="custom_prompt" class="block text-sm font-semibold text-slate-700 mb-1.5">
+            Custom AI Prompt <span class="text-red-500">*</span>
+          </label>
+          <textarea id="custom_prompt" name="custom_prompt" rows="3" placeholder="e.g. Write a professional certificate body text for a hackathon..." class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-sm"></textarea>
+        </div>
+
+        <!-- Manual Upload Section -->
+        <div id="manual-upload-section" class="mb-6 hidden">
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+            Upload Scanned Template <span class="text-red-500">*</span>
+          </label>
+          <input type="file" name="manual_template_file" accept=".jpg,.jpeg,.png,.pdf" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm" />
+          <p class="text-xs text-slate-400 mt-1">Supported formats: JPG, PNG, PDF. Student Name and Registration No. will be overlaid automatically.</p>
+        </div>
+
+        <hr class="border-slate-100 my-6">
+
+        <!-- Signatures Section -->
+        <h3 class="text-md font-bold text-slate-800 mb-4">Signatories</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Left Signature Title</label>
+            <input type="text" name="sig_left_title" value="Dean of Faculty" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Right Signature Title</label>
+            <input type="text" name="sig_right_title" value="Vice Chancellor" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm" />
+          </div>
+        </div>
+
+        <button id="btn-submit" type="submit"
+                class="w-full flex items-center justify-center gap-2 bg-cust-700 hover:bg-cust-800 text-white font-semibold py-3 rounded-xl shadow-md transition-all text-sm">
+          Continue & Save
+        </button>
+      </form>
+
+      {% else %}
+      <!-- STEP 2 (Only for AI Generation Review) -->
+      <form method="POST" action="{{ url_for('create_certificate') }}" id="save-form">
+        <input type="hidden" name="action" value="save" />
+        <input type="hidden" name="creation_mode" value="ai" />
+        <input type="hidden" name="category" value="{{ category }}" />
+        <input type="hidden" name="prompt_used" value="{{ prompt_used }}" />
+        <!-- Carry over signatures -->
+        <input type="hidden" name="sig_left_title" value="{{ request.form.get('sig_left_title', 'Dean of Faculty') }}" />
+        <input type="hidden" name="sig_right_title" value="{{ request.form.get('sig_right_title', 'Vice Chancellor') }}" />
+
+        <div class="mb-5 flex items-center gap-3">
+          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-cust-100 text-cust-800">{{ category }}</span>
+          <span class="text-xs text-slate-400">AI-generated text is ready — review and edit below.</span>
+        </div>
+
+        <div class="mb-6">
+          <label for="generated_text" class="block text-sm font-semibold text-slate-700 mb-1.5">
+            Certificate Body Text
+          </label>
+          <textarea id="generated_text" name="generated_text" rows="7" class="w-full px-4 py-3 rounded-xl border border-cust-200 bg-cust-50/40 text-slate-800 text-sm leading-relaxed">{{ ai_text }}</textarea>
+        </div>
+
+        <div class="flex gap-3">
+          <a href="{{ url_for('create_certificate') }}" class="flex-1 text-center border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold py-3 rounded-xl text-sm">
+            ← Cancel
+          </a>
+          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl shadow-md text-sm">
+            Save & Generate Student Link
+          </button>
+        </div>
+      </form>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<script>
+function onCategoryChange(radio) {
+  const section = document.getElementById('custom-prompt-section');
+  if (radio.value === 'Custom AI' && document.querySelector('input[name="creation_mode"]:checked').value === 'ai') {
+    section.classList.remove('hidden');
+  } else {
+    section.classList.add('hidden');
+  }
+}
+
+function updateFormUI() {
+  const mode = document.querySelector('input[name="creation_mode"]:checked').value;
+  const catSection = document.getElementById('category-section');
+  const uploadSection = document.getElementById('manual-upload-section');
+  const customPromptSection = document.getElementById('custom-prompt-section');
+  const btnSubmit = document.getElementById('btn-submit');
+  const actionInput = document.getElementById('form-action');
+
+  // Reset display
+  catSection.classList.remove('hidden');
+  uploadSection.classList.add('hidden');
+  customPromptSection.classList.add('hidden');
+  
+  // Hide Custom AI option if predefined
+  const customAICard = document.querySelector('.category-card[data-cat="Custom AI"]');
+  if(customAICard) {
+      if (mode === 'predefined') customAICard.classList.add('hidden');
+      else customAICard.classList.remove('hidden');
+  }
+
+  if (mode === 'predefined') {
+    actionInput.value = 'save';
+    btnSubmit.innerHTML = 'Save & Generate Link';
+    // Select first visible category if Custom AI was selected
+    const activeCat = document.querySelector('input[name="category"]:checked').value;
+    if(activeCat === 'Custom AI') {
+        document.querySelector('input[name="category"][value="Dean\'s Honor"]').checked = true;
+    }
+  } else if (mode === 'manual') {
+    catSection.classList.add('hidden');
+    uploadSection.classList.remove('hidden');
+    actionInput.value = 'save';
+    btnSubmit.innerHTML = 'Upload & Generate Link';
+  } else if (mode === 'ai') {
+    actionInput.value = 'generate';
+    btnSubmit.innerHTML = 'Generate AI Text →';
+    const activeCat = document.querySelector('input[name="category"]:checked');
+    if (activeCat && activeCat.value === 'Custom AI') {
+      customPromptSection.classList.remove('hidden');
+    }
+  }
+}
+
+// Initialize UI state on page load
+document.addEventListener('DOMContentLoaded', updateFormUI);
+</script>
+{% endblock %}
