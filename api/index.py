@@ -56,7 +56,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
 #  Flask App Initialisation
 # ─────────────────────────────────────────────
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = SECRET_KEY
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -143,9 +143,14 @@ def init_db():
     db.commit()
 
 
-# Initialise tables when the app starts
-with app.app_context():
-    init_db()
+db_initialized = False
+
+@app.before_request
+def setup_db():
+    global db_initialized
+    if not db_initialized:
+        init_db()
+        db_initialized = True
 
 
 # ─────────────────────────────────────────────
