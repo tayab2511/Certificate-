@@ -42,14 +42,14 @@ OPENROUTER_MODEL = "meta-llama/llama-3-8b-instruct:free"
 SECRET_KEY = os.environ.get("SECRET_KEY", "cust-cert-system-super-secret-2025")
 
 # Check if running on Vercel
-IS_VERCEL = os.environ.get("VERCEL") == "1" or os.environ.get("VERCEL_ENV")
+IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or os.environ.get("AWS_EXECUTION_ENV"))
 
 # SQLite database path (created automatically on first run)
 # Vercel serverless functions only have write access to /tmp
-DATABASE = "/tmp/certificates.db" if IS_VERCEL else os.path.join(os.path.dirname(__file__), "certificates.db")
+DATABASE = "/tmp/certificates.db" if IS_VERCEL else os.path.join(os.path.dirname(__file__), "..", "certificates.db")
 
 # Upload folder for manual templates
-UPLOAD_FOLDER = "/tmp/uploads" if IS_VERCEL else os.path.join(os.path.dirname(__file__), "static", "uploads")
+UPLOAD_FOLDER = "/tmp/uploads" if IS_VERCEL else os.path.join(os.path.dirname(__file__), "..", "static", "uploads")
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
 
 # ─────────────────────────────────────────────
@@ -60,8 +60,11 @@ app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = SECRET_KEY
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Ensure upload directory exists
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Ensure upload directory exists safely (prevents read-only filesystem crash on Vercel)
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create upload folder {UPLOAD_FOLDER}: {e}")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
