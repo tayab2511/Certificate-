@@ -41,11 +41,15 @@ OPENROUTER_MODEL = "meta-llama/llama-3-8b-instruct:free"
 # Flask secret key — change in production!
 SECRET_KEY = os.environ.get("SECRET_KEY", "cust-cert-system-super-secret-2025")
 
+# Check if running on Vercel
+IS_VERCEL = os.environ.get("VERCEL") == "1" or os.environ.get("VERCEL_ENV")
+
 # SQLite database path (created automatically on first run)
-DATABASE = os.path.join(os.path.dirname(__file__), "certificates.db")
+# Vercel serverless functions only have write access to /tmp
+DATABASE = "/tmp/certificates.db" if IS_VERCEL else os.path.join(os.path.dirname(__file__), "certificates.db")
 
 # Upload folder for manual templates
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "static", "uploads")
+UPLOAD_FOLDER = "/tmp/uploads" if IS_VERCEL else os.path.join(os.path.dirname(__file__), "static", "uploads")
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
 
 # ─────────────────────────────────────────────
