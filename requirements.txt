@@ -1,16 +1,5 @@
-# CUST University Certificate Management System
-# ─────────────────────────────────────────────
-# Core Framework
 Flask>=3.0.0
-
-# Google Gemini AI (for USE_API = "gemini")
-google-generativeai>=0.7.0
-
-# OpenAI-compatible client (for USE_API = "openrouter")
 openai>=1.30.0
-
-# Image processing — optional, for Pillow-based certificate generation
 Pillow>=10.0.0
-
-# HTTP requests (utility, used as fallback)
 requests>=2.31.0
+Werkzeug>=3.0.0
